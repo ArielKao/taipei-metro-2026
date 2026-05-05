@@ -1,20 +1,19 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>捷運地圖通 Metro Map Go</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
-        
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #f0f2f5;
-            -webkit-tap-highlight-color: transparent;
-        }
+<!-- 引入外部資源 (WordPress 建議放在 HTML 區塊最上方) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 
+<div id="mrt-app-container" class="mrt-app-wrapper" style="font-family: 'Noto Sans TC', sans-serif; background-color: #f0f2f5; padding: 20px 10px; border-radius: 15px;">
+    <style>
+        /* 避免 WP 主題干擾的局部樣式 */
+        .mrt-app-wrapper {
+            all: initial; /* 重置部分樣式 */
+            font-family: 'Noto Sans TC', sans-serif;
+            display: block;
+            background-color: #f0f2f5;
+        }
+        .mrt-app-wrapper * { box-sizing: border-box; }
+        
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -26,7 +25,7 @@
             padding: 2px 8px;
             border-radius: 4px;
             color: white;
-            font-size: 0.7rem;
+            font-size: 11px;
             font-weight: bold;
             margin-right: 4px;
             display: inline-block;
@@ -52,16 +51,22 @@
         .suggestion-box {
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
         }
+        
+        .spin-slow {
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
-</head>
-<body class="p-4 md:p-8">
 
     <div class="max-w-md mx-auto">
         <!-- Header -->
         <header class="mb-6 text-center">
-            <div class="inline-block bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full mb-2 font-bold tracking-wider">北捷/機捷/環狀線三鐵統整</div>
+            <div class="inline-block bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full mb-2 font-bold tracking-wider">北捷/機捷/環狀線 聯網版</div>
             <h1 class="text-3xl font-bold text-gray-800 mb-1">
-                <i class="fas fa-train-subway text-blue-600 mr-2"></i>捷運地圖通 Metro Map Go
+                <i class="fas fa-train-subway text-blue-600 mr-2"></i>捷運地圖通：大台北捷運跨系統路線規劃工具
             </h1>
             <p class="text-gray-500 text-xs" id="currentTimeDisplay"></p>
         </header>
@@ -77,8 +82,8 @@
                             class="w-full pl-11 pr-24 py-3 bg-gray-100/50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-sm">
                         
                         <div class="absolute right-2 flex items-center">
-                            <i id="clearStart" class="fas fa-times-circle text-gray-300 cursor-pointer p-2 hidden" onclick="clearSearch('startInput')"></i>
-                            <button id="gpsBtn" onclick="useCurrentLocation()" class="p-2 text-blue-600 active:scale-90 transition-transform">
+                            <i id="clearStart" class="fas fa-times-circle text-gray-300 cursor-pointer p-2 hidden"></i>
+                            <button id="gpsBtn" class="p-2 text-blue-600 active:scale-90 transition-transform">
                                 <i id="gpsIcon" class="fas fa-location-arrow"></i>
                             </button>
                         </div>
@@ -87,7 +92,7 @@
                 </div>
 
                 <div class="flex justify-center -my-2 relative z-10">
-                    <button onclick="swapStations()" class="bg-white p-2 rounded-full shadow-md hover:shadow-lg text-gray-400 border border-gray-50 active:rotate-180 transition-transform duration-300">
+                    <button id="swapBtn" class="bg-white p-2 rounded-full shadow-md hover:shadow-lg text-gray-400 border border-gray-50 active:rotate-180 transition-transform duration-300">
                         <i class="fas fa-exchange-alt fa-rotate-90"></i>
                     </button>
                 </div>
@@ -98,12 +103,12 @@
                         <i class="fas fa-flag-checkered absolute left-4 text-red-500"></i>
                         <input type="text" id="endInput" autocomplete="off" placeholder="要去哪裡？" 
                             class="w-full pl-11 pr-12 py-3 bg-gray-100/50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all outline-none text-sm">
-                        <i id="clearEnd" class="fas fa-times-circle absolute right-3 text-gray-300 cursor-pointer hidden" onclick="clearSearch('endInput')"></i>
+                        <i id="clearEnd" class="fas fa-times-circle absolute right-3 text-gray-300 cursor-pointer hidden"></i>
                     </div>
                     <div id="endSuggestions" class="hidden absolute z-[200] w-full top-full mt-2 bg-white rounded-xl suggestion-box border border-gray-100 max-h-60 overflow-y-auto no-scrollbar"></div>
                 </div>
 
-                <button onclick="calculateRoute()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98]">
+                <button id="searchBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98]">
                     開始規劃路徑
                 </button>
             </div>
@@ -116,14 +121,10 @@
             </div>
             
             <div id="successContent" class="hidden space-y-4">
-                <!-- 多路徑選擇器 -->
                 <div class="overflow-x-auto no-scrollbar pb-2">
-                    <div id="pathOptionsList" class="flex space-x-3 px-1">
-                        <!-- 動態插入選項 -->
-                    </div>
+                    <div id="pathOptionsList" class="flex space-x-3 px-1"></div>
                 </div>
 
-                <!-- 詳細路徑內容 -->
                 <div class="glass-card overflow-hidden">
                     <div class="bg-gray-800 p-4 text-white flex justify-between items-center">
                         <span class="text-sm font-medium">建議路徑詳情</span>
@@ -151,346 +152,261 @@
         </div>
 
         <!-- Toast Notification -->
-        <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-5 py-2.5 rounded-full text-xs font-medium shadow-2xl opacity-0 transition-all pointer-events-none z-[300]"></div>
+        <div id="mrtToast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-5 py-2.5 rounded-full text-xs font-medium shadow-2xl opacity-0 transition-all pointer-events-none z-[300]"></div>
 
         <div id="loading" class="hidden text-center py-8">
-            <div class="inline-block animate-spin rounded-full h-6 w-6 border-3 border-blue-500 border-t-transparent"></div>
+            <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
             <p class="mt-2 text-gray-400 text-xs">正在計算多條轉乘路徑...</p>
         </div>
     </div>
 
     <script>
-        const STATION_COORDS = {
-            "臺北車站": [25.0477, 121.5170], "中山": [25.0526, 121.5204], "西門": [25.0422, 121.5083],
-            "中正紀念堂": [25.0354, 121.5190], "忠孝新生": [25.0423, 121.5332], "忠孝復興": [25.0416, 121.5436],
-            "南京復興": [25.0522, 121.5441], "大安": [25.0329, 121.5435], "古亭": [25.0263, 121.5226],
-            "東門": [25.0338, 121.5283], "松江南京": [25.0515, 121.5320], "民權西路": [25.0620, 121.5193],
-            "景安": [24.9935, 121.5050], "大坪林": [24.9829, 121.5414], "板橋": [25.0130, 121.4621],
-            "中和": [25.0006, 121.4913], "市政府": [25.0411, 121.5653], "台北101/世貿": [25.0330, 121.5641],
-            "南港展覽館": [25.0553, 121.6175], "淡水": [25.1678, 121.4456], "北投": [25.1317, 121.4988], "動物園": [24.9982, 121.5793],
-            "三重": [25.0483, 121.4831], "新北產業園區": [25.0615, 121.4599], "新莊副都心": [25.0592, 121.4491],
-            "泰山": [25.0538, 121.4398], "泰山貴和": [25.0366, 121.4172], "體育大學": [25.0338, 121.3912],
-            "長庚醫院": [25.0611, 121.3683], "林口": [25.0658, 121.3622], "山鼻": [25.0772, 121.3195],
-            "坑口": [25.0863, 121.2657], "機場第一航廈": [25.0827, 121.2405], "機場第二航廈": [25.0805, 121.2330],
-            "機場旅館": [25.0740, 121.2295], "大園": [25.0653, 121.2144], "橫山": [25.0450, 121.2051],
-            "領航": [25.0232, 121.2144], "高鐵桃園站": [25.0130, 121.2151], "桃園體育園區": [25.0031, 121.2045],
-            "興南": [24.9880, 121.2111], "環北": [24.9675, 121.2245], "老街溪": [24.9602, 121.2205]
-        };
-
-        const ALL_LINES = {
-            "BR": ["南港展覽館", "南港軟體園區", "東湖", "葫洲", "大湖公園", "內湖", "文德", "港墘", "西湖", "劍南路", "大直", "松山機場", "中山國中", "南京復興", "忠孝復興", "大安", "科技大樓", "六張犁", "麟光", "辛亥", "萬芳醫院", "萬芳社區", "木柵", "動物園"],
-            "R": ["淡水", "紅樹林", "竹圍", "關渡", "忠義", "復興崗", "北投", "奇岩", "唭哩岸", "石牌", "明德", "芝山", "士林", "劍潭", "圓山", "民權西路", "雙連", "中山", "臺北車站", "台大醫院", "中正紀念堂", "東門", "大安森林公園", "大安", "信義安和", "台北101/世貿", "象山", "廣慈/奉天宮"],
-            "G": ["松山", "南京三民", "台北小巨蛋", "南京復興", "松江南京", "中山", "北門", "西門", "小南門", "中正紀念堂", "古亭", "台電大樓", "公館", "萬隆", "景美", "大坪林", "七張", "新店區公所", "新店"],
-            "O": ["蘆洲", "三民高中", "徐匯中學", "三和國中", "三重國小", "大橋頭", "台北橋", "菜寮", "三重", "先嗇宮", "頭前庄", "新莊", "輔大", "丹鳳", "迴龍"],
-            "BL": ["南港展覽館", "南港", "昆陽", "後山埤", "永春", "市政府", "國父紀念館", "忠孝敦化", "忠孝復興", "忠孝新生", "善導寺", "臺北車站", "西門", "龍山寺", "江子翠", "新埔", "板橋", "府中", "亞東醫院", "海山", "土城", "永寧", "頂埔"],
-            "Y": ["大坪林", "十四張", "秀朗橋", "景平", "景安", "中和", "橋和", "中原", "板新", "板橋", "新埔民生", "頭前庄", "幸福", "新北產業園區"],
-            "A": ["臺北車站", "三重", "新北產業園區", "新莊副都心", "泰山", "泰山貴和", "體育大學", "長庚醫院", "林口", "山鼻", "坑口", "機場第一航廈", "機場第二航廈", "機場旅館", "大園", "橫山", "領航", "高鐵桃園站", "桃園體育園區", "興南", "環北", "老街溪"]
-        };
-
-        const LINE_COLORS = { "BR": "#c48c31", "R": "#e3002c", "G": "#008659", "O": "#f8b61c", "BL": "#0070bd", "Y": "#ffdb00", "A": "#8246af" };
-        const LINE_NAMES = { "BR": "文湖線", "R": "淡水信義線", "G": "松山新店線", "O": "中和新蘆線", "BL": "板南線", "Y": "環狀線", "A": "機場捷運" };
-
-        const stationMap = {};
-        const STATIONS_LIST = [];
-        const adjacency = {};
-
-        Object.keys(ALL_LINES).forEach(lineCode => {
-            ALL_LINES[lineCode].forEach((name, idx) => {
-                let normalizedName = (name === "台北車站") ? "臺北車站" : name;
-                if (!stationMap[normalizedName]) {
-                    stationMap[normalizedName] = { name: normalizedName, lines: [] };
-                    STATIONS_LIST.push(stationMap[normalizedName]);
-                }
-                if (!stationMap[normalizedName].lines.includes(lineCode)) stationMap[normalizedName].lines.push(lineCode);
-                if (!adjacency[normalizedName]) adjacency[normalizedName] = [];
-                if (idx > 0) {
-                    let prevName = ALL_LINES[lineCode][idx - 1];
-                    let normPrev = (prevName === "台北車站") ? "臺北車站" : prevName;
-                    adjacency[normalizedName].push({ to: normPrev, line: lineCode });
-                }
-                if (idx < ALL_LINES[lineCode].length - 1) {
-                    let nextName = ALL_LINES[lineCode][idx + 1];
-                    let normNext = (nextName === "台北車站") ? "臺北車站" : nextName;
-                    adjacency[normalizedName].push({ to: normNext, line: lineCode });
-                }
-            });
-        });
-
-        // 票價計費引擎
-        function calculateOfficialFare(path, startName, endName) {
-            const hasAirportLine = path.some(p => p.line === 'A');
-            const onlyAirportLine = path.every(p => p.line === 'A');
-            const hasCircularLine = path.some(p => p.line === 'Y');
-            const totalSteps = path.length;
-
-            if ((startName === "動物園" && endName === "臺北車站") || (startName === "臺北車站" && endName === "動物園")) return 35;
-
-            if (hasAirportLine) {
-                const isA1 = (startName === "臺北車站" || endName === "臺北車站");
-                if (isA1) {
-                    if (startName === "體育大學" || endName === "體育大學") return 65;
-                    if (startName === "長庚醫院" || endName === "長庚醫院" || startName === "林口" || endName === "林口") return 80;
-                    if (startName === "山鼻" || endName === "山鼻") return 115;
-                    if (startName.includes("機場")) return 150;
-                    if (startName === "高鐵桃園站" || endName === "高鐵桃園站") return 160;
-                    return 160;
-                }
-                if (onlyAirportLine) {
-                    if (totalSteps <= 1) return 30;
-                    if (totalSteps <= 3) return 35;
-                    if (totalSteps <= 6) return 50;
-                    return 80;
-                }
-                return 30 + (totalSteps * 4) + 35; 
-            }
-
-            if (hasCircularLine) {
-                if ((startName === "大坪林" && endName === "板橋") || (startName === "板橋" && endName === "大坪林")) return 30;
-                if ((startName === "大坪林" && endName === "景安") || (startName === "景安" && endName === "大坪林")) return 20;
-            }
-
-            if (totalSteps <= 4) return 20;
-            if (totalSteps <= 7) return 25;
-            if (totalSteps <= 10) return 30;
-            if (totalSteps <= 14) return 35;
-            if (totalSteps <= 18) return 40;
-            if (totalSteps <= 22) return 45;
-            return 50; 
-        }
-
-        // 修改為搜尋多個路徑的 BFS
-        function findAllPaths(start, end) {
-            start = (start === "台北車站") ? "臺北車站" : start;
-            end = (end === "台北車站") ? "臺北車站" : end;
-            
-            const queue = [[start, [], null, 0]];
-            const foundPaths = [];
-            const visitedMinSteps = {}; // 用來剪枝
-
-            while (queue.length > 0) {
-                const [current, path, lastLine, transfers] = queue.shift();
+        (function() {
+            // 使用 IIFE 避免全域變數汙染，這在 WordPress 中很重要
+            document.addEventListener('DOMContentLoaded', function() {
                 
-                // 到達終點
-                if (current === end) {
-                    foundPaths.push({ steps: path, transfers });
-                    if (foundPaths.length >= 3) break; // 抓取前三種適合的路徑即可
-                    continue;
-                }
+                const STATION_COORDS = {
+                    "臺北車站": [25.0477, 121.5170], "中山": [25.0526, 121.5204], "西門": [25.0422, 121.5083],
+                    "中正紀念堂": [25.0354, 121.5190], "忠孝新生": [25.0423, 121.5332], "忠孝復興": [25.0416, 121.5436],
+                    "南京復興": [25.0522, 121.5441], "大安": [25.0329, 121.5435], "古亭": [25.0263, 121.5226],
+                    "東門": [25.0338, 121.5283], "松江南京": [25.0515, 121.5320], "民權西路": [25.0620, 121.5193],
+                    "景安": [24.9935, 121.5050], "大坪林": [24.9829, 121.5414], "板橋": [25.0130, 121.4621],
+                    "中和": [25.0006, 121.4913], "市政府": [25.0411, 121.5653], "台北101/世貿": [25.0330, 121.5641],
+                    "南港展覽館": [25.0553, 121.6175], "淡水": [25.1678, 121.4456], "北投": [25.1317, 121.4988], "動物園": [24.9982, 121.5793],
+                    "三重": [25.0483, 121.4831], "新北產業園區": [25.0615, 121.4599], "新莊副都心": [25.0592, 121.4491],
+                    "泰山": [25.0538, 121.4398], "泰山貴和": [25.0366, 121.4172], "體育大學": [25.0338, 121.3912],
+                    "長庚醫院": [25.0611, 121.3683], "林口": [25.0658, 121.3622], "山鼻": [25.0772, 121.3195],
+                    "坑口": [25.0863, 121.2657], "機場第一航廈": [25.0827, 121.2405], "機場第二航廈": [25.0805, 121.2330],
+                    "機場旅館": [25.0740, 121.2295], "大園": [25.0653, 121.2144], "橫山": [25.0450, 121.2051],
+                    "領航": [25.0232, 121.2144], "高鐵桃園站": [25.0130, 121.2151], "桃園體育園區": [25.0031, 121.2045],
+                    "興南": [24.9880, 121.2111], "環北": [24.9675, 121.2245], "老街溪": [24.9602, 121.2205]
+                };
 
-                const neighbors = adjacency[current] || [];
-                for (const neighbor of neighbors) {
-                    let newTransfers = transfers;
-                    if (lastLine && lastLine !== neighbor.line) newTransfers++;
-                    
-                    // 剪枝邏輯
-                    if (newTransfers > 3) continue; // 轉乘次數限制
-                    if (path.length > 35) continue; // 總長度限制
+                const ALL_LINES = {
+                    "BR": ["南港展覽館", "南港軟體園區", "東湖", "葫洲", "大湖公園", "內湖", "文德", "港墘", "西湖", "劍南路", "大直", "松山機場", "中山國中", "南京復興", "忠孝復興", "大安", "科技大樓", "六張犁", "麟光", "辛亥", "萬芳醫院", "萬芳社區", "木柵", "動物園"],
+                    "R": ["淡水", "紅樹林", "竹圍", "關渡", "忠義", "復興崗", "北投", "奇岩", "唭哩岸", "石牌", "明德", "芝山", "士林", "劍潭", "圓山", "民權西路", "雙連", "中山", "臺北車站", "台大醫院", "中正紀念堂", "東門", "大安森林公園", "大安", "信義安和", "台北101/世貿", "象山", "廣慈/奉天宮"],
+                    "G": ["松山", "南京三民", "台北小巨蛋", "南京復興", "松江南京", "中山", "北門", "西門", "小南門", "中正紀念堂", "古亭", "台電大樓", "公館", "萬隆", "景美", "大坪林", "七張", "新店區公所", "新店"],
+                    "O": ["蘆洲", "三民高中", "徐匯中學", "三和國中", "三重國小", "大橋頭", "台北橋", "菜寮", "三重", "先嗇宮", "頭前庄", "新莊", "輔大", "丹鳳", "迴龍"],
+                    "BL": ["南港展覽館", "南港", "昆陽", "後山埤", "永春", "市政府", "國父紀念館", "忠孝敦化", "忠孝復興", "忠孝新生", "善導寺", "臺北車站", "西門", "龍山寺", "江子翠", "新埔", "板橋", "府中", "亞東醫院", "海山", "土城", "永寧", "頂埔"],
+                    "Y": ["大坪林", "十四張", "秀朗橋", "景平", "景安", "中和", "橋和", "中原", "板新", "板橋", "新埔民生", "頭前庄", "幸福", "新北產業園區"],
+                    "A": ["臺北車站", "三重", "新北產業園區", "新莊副都心", "泰山", "泰山貴和", "體育大學", "長庚醫院", "林口", "山鼻", "坑口", "機場第一航廈", "機場第二航廈", "機場旅館", "大園", "橫山", "領航", "高鐵桃園站", "桃園體育園區", "興南", "環北", "老街溪"]
+                };
 
-                    // 記錄節點訪問狀態 (允許一定程度的冗餘以探索不同轉乘站)
-                    const stateKey = neighbor.to + neighbor.line;
-                    if (!visitedMinSteps[stateKey] || visitedMinSteps[stateKey] >= path.length) {
-                        visitedMinSteps[stateKey] = path.length;
-                        const newPath = [...path, { from: current, to: neighbor.to, line: neighbor.line, isTransfer: lastLine && lastLine !== neighbor.line }];
-                        queue.push([neighbor.to, newPath, neighbor.line, newTransfers]);
-                    }
-                }
-            }
-            
-            // 根據路徑特徵去重 (保留不同轉乘組合的路徑)
-            return foundPaths.sort((a,b) => a.steps.length - b.steps.length).slice(0, 4);
-        }
+                const LINE_COLORS = { "BR": "#c48c31", "R": "#e3002c", "G": "#008659", "O": "#f8b61c", "BL": "#0070bd", "Y": "#ffdb00", "A": "#8246af" };
+                const LINE_NAMES = { "BR": "文湖線", "R": "淡水信義線", "G": "松山新店線", "O": "中和新蘆線", "BL": "板南線", "Y": "環狀線", "A": "機場捷運" };
 
-        let currentPaths = [];
+                const stationMap = {};
+                const STATIONS_LIST = [];
+                const adjacency = {};
 
-        function calculateRoute() {
-            let sName = document.getElementById('startInput').value.trim();
-            let eName = document.getElementById('endInput').value.trim();
-            if(sName === "台北車站") sName = "臺北車站";
-            if(eName === "台北車站") eName = "臺北車站";
-            
-            if (!sName || !eName || !stationMap[sName] || !stationMap[eName]) {
-                showToast("請輸入完整站名");
-                return;
-            }
-
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('resultCard').classList.add('hidden');
-
-            setTimeout(() => {
-                const paths = findAllPaths(sName, eName);
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('resultCard').classList.remove('hidden');
-
-                if (paths.length > 0) {
-                    currentPaths = paths;
-                    document.getElementById('errorMsg').classList.add('hidden');
-                    document.getElementById('successContent').classList.remove('hidden');
-                    renderPathOptions(sName, eName, paths);
-                    selectPath(0, sName, eName); // 預設選取第一條
-                } else {
-                    document.getElementById('errorMsg').classList.remove('hidden');
-                    document.getElementById('successContent').classList.add('hidden');
-                }
-            }, 400);
-        }
-
-        function renderPathOptions(sName, eName, paths) {
-            const list = document.getElementById('pathOptionsList');
-            list.innerHTML = '';
-            
-            paths.forEach((path, idx) => {
-                const transfers = path.steps.filter(s => s.isTransfer).map(s => s.from);
-                const fare = calculateOfficialFare(path.steps, sName, eName);
-                
-                const card = document.createElement('div');
-                card.id = `path-opt-${idx}`;
-                card.className = 'path-option min-w-[160px] bg-white p-3 rounded-xl shadow-sm cursor-pointer border-2';
-                card.onclick = () => selectPath(idx, sName, eName);
-                
-                card.innerHTML = `
-                    <div class="text-[10px] font-bold text-blue-500 mb-1">選項 ${idx + 1}</div>
-                    <div class="text-sm font-bold text-gray-800 mb-2">經 ${transfers.length > 0 ? transfers.join('、') : '直達'}</div>
-                    <div class="flex justify-between items-end">
-                        <div class="text-[10px] text-gray-400">${path.steps.length} 站 / $${fare}</div>
-                        <i class="fas fa-chevron-right text-gray-200 text-xs"></i>
-                    </div>
-                `;
-                list.appendChild(card);
-            });
-        }
-
-        function selectPath(index, sName, eName) {
-            // 切換按鈕樣式
-            document.querySelectorAll('.path-option').forEach(el => el.classList.remove('active'));
-            document.getElementById(`path-opt-${index}`).classList.add('active');
-            
-            // 渲染選中的路徑
-            renderTimeline(sName, eName, currentPaths[index]);
-        }
-
-        function renderTimeline(startName, endName, result) {
-            const timeline = document.getElementById('routeTimeline');
-            timeline.innerHTML = '';
-            const totalStations = result.steps.length;
-            const transfers = result.transfers;
-            
-            let travelTime = 0;
-            result.steps.forEach(step => {
-                travelTime += (step.line === "A") ? 4 : 2.5; 
-            });
-            travelTime += (transfers * 6); 
-
-            const fare = calculateOfficialFare(result.steps, startName, endName);
-            
-            document.getElementById('resTimeLabel').innerText = `約 ${Math.round(travelTime)} 分鐘`;
-            document.getElementById('resFare').innerText = `$${fare}`;
-            document.getElementById('resStations').innerText = `${totalStations} 站`;
-            document.getElementById('resTransfers').innerText = `${transfers} 次`;
-
-            const nodes = [{ name: startName, line: result.steps[0].line, note: "起點上車" }];
-            result.steps.forEach((step, idx) => {
-                if (step.isTransfer) {
-                    nodes.push({ name: step.from, line: result.steps[idx-1].line, nextLine: step.line, note: `轉乘 ${LINE_NAMES[step.line]}` });
-                }
-            });
-            nodes.push({ name: endName, line: result.steps[result.steps.length - 1].line, note: "抵達" });
-
-            nodes.forEach((node, idx) => {
-                const item = document.createElement('div');
-                item.className = 'relative pl-10 pb-6 last:pb-2 animate-fade-in';
-                const colorClass = idx === 0 ? 'bg-blue-600' : (idx === nodes.length - 1 ? 'bg-red-500' : 'bg-purple-500');
-                item.innerHTML = `
-                    <div class="absolute left-0 top-1.5 w-10 h-10 flex items-center justify-center z-10">
-                        <div class="w-3.5 h-3.5 rounded-full ${colorClass} ring-4 ring-white shadow-sm"></div>
-                    </div>
-                    <div>
-                        <div class="font-bold text-gray-800 text-sm">${node.name}</div>
-                        <div class="flex items-center mt-0.5">
-                            <span class="line-badge" style="background:${LINE_COLORS[node.line]}">${node.line}</span>
-                            <span class="text-[10px] text-gray-400 ml-2 font-medium">${node.note}</span>
-                        </div>
-                    </div>`;
-                timeline.appendChild(item);
-            });
-        }
-
-        function useCurrentLocation() {
-            const icon = document.getElementById('gpsIcon');
-            if (!navigator.geolocation) return showToast("不支援定位");
-            icon.classList.add('spin-slow');
-            showToast("定位搜尋中...");
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const nearest = findNearestStation(pos.coords.latitude, pos.coords.longitude);
-                    document.getElementById('startInput').value = nearest;
-                    toggleClearBtn('startInput');
-                    showToast(`最近車站：${nearest}`);
-                    icon.classList.remove('spin-slow');
-                },
-                () => {
-                    showToast("定位失敗");
-                    icon.classList.remove('spin-slow');
-                },
-                { enableHighAccuracy: true, timeout: 5000 }
-            );
-        }
-
-        function findNearestStation(lat, lon) {
-            let min = Infinity, nearest = "臺北車站";
-            for (const [name, coords] of Object.entries(STATION_COORDS)) {
-                const d = Math.hypot(lat - coords[0], lon - coords[1]);
-                if (d < min) { min = d; nearest = name; }
-            }
-            return nearest;
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg;
-            t.style.opacity = "1";
-            setTimeout(() => t.style.opacity = "0", 3000);
-        }
-
-        function clearSearch(id) { document.getElementById(id).value = ''; toggleClearBtn(id); }
-        function toggleClearBtn(id) { 
-            const btn = document.getElementById(id === 'startInput' ? 'clearStart' : 'clearEnd');
-            btn.classList.toggle('hidden', !document.getElementById(id).value); 
-        }
-
-        function setupAutocomplete(input, box) {
-            input.addEventListener('input', (e) => {
-                toggleClearBtn(input.id);
-                const val = e.target.value.trim();
-                box.innerHTML = '';
-                if (!val) { box.classList.add('hidden'); return; }
-                const list = STATIONS_LIST.filter(s => s.name.includes(val) || (s.name === "臺北車站" && val.includes("台北"))).slice(0, 10);
-                list.forEach(s => {
-                    const div = document.createElement('div');
-                    div.className = 'px-4 py-3 hover:bg-gray-50 cursor-pointer flex justify-between items-center text-sm border-b border-gray-50 active:bg-blue-50';
-                    div.innerHTML = `
-                        <span class="font-medium text-gray-700">${s.name}</span>
-                        <div class="flex">${s.lines.map(l => `<span class="w-3 h-3 rounded-full ml-1 border border-white shadow-sm" style="background:${LINE_COLORS[l]}"></span>`).join('')}</div>
-                    `;
-                    div.onclick = () => { input.value = s.name; box.classList.add('hidden'); toggleClearBtn(input.id); };
-                    box.appendChild(div);
+                Object.keys(ALL_LINES).forEach(lineCode => {
+                    ALL_LINES[lineCode].forEach((name, idx) => {
+                        let normalizedName = (name === "台北車站") ? "臺北車站" : name;
+                        if (!stationMap[normalizedName]) {
+                            stationMap[normalizedName] = { name: normalizedName, lines: [] };
+                            STATIONS_LIST.push(stationMap[normalizedName]);
+                        }
+                        if (!stationMap[normalizedName].lines.includes(lineCode)) stationMap[normalizedName].lines.push(lineCode);
+                        if (!adjacency[normalizedName]) adjacency[normalizedName] = [];
+                        if (idx > 0) {
+                            let prevName = ALL_LINES[lineCode][idx - 1];
+                            let normPrev = (prevName === "台北車站") ? "臺北車站" : prevName;
+                            adjacency[normalizedName].push({ to: normPrev, line: lineCode });
+                        }
+                        if (idx < ALL_LINES[lineCode].length - 1) {
+                            let nextName = ALL_LINES[lineCode][idx + 1];
+                            let normNext = (nextName === "台北車站") ? "臺北車站" : nextName;
+                            adjacency[normalizedName].push({ to: normNext, line: lineCode });
+                        }
+                    });
                 });
-                box.classList.toggle('hidden', list.length === 0);
+
+                function showToast(msg) {
+                    const t = document.getElementById('mrtToast');
+                    t.innerText = msg;
+                    t.style.opacity = "1";
+                    setTimeout(() => t.style.opacity = "0", 3000);
+                }
+
+                function calculateOfficialFare(path, startName, endName) {
+                    const hasAirportLine = path.some(p => p.line === 'A');
+                    const onlyAirportLine = path.every(p => p.line === 'A');
+                    const totalSteps = path.length;
+                    if ((startName === "動物園" && endName === "臺北車站") || (startName === "臺北車站" && endName === "動物園")) return 35;
+                    if (hasAirportLine) {
+                        const isA1 = (startName === "臺北車站" || endName === "臺北車站");
+                        if (isA1) {
+                            if (startName === "體育大學" || endName === "體育大學") return 65;
+                            if (startName === "長庚醫院" || endName === "長庚醫院" || startName === "林口" || endName === "林口") return 80;
+                            if (startName === "山鼻" || endName === "山鼻") return 115;
+                            if (startName.includes("機場")) return 150;
+                            return 160;
+                        }
+                        return onlyAirportLine ? (totalSteps <= 3 ? 35 : 80) : 75;
+                    }
+                    if (totalSteps <= 4) return 20;
+                    if (totalSteps <= 7) return 25;
+                    if (totalSteps <= 10) return 30;
+                    if (totalSteps <= 14) return 35;
+                    return 50; 
+                }
+
+                function findAllPaths(start, end) {
+                    const queue = [[start, [], null, 0]];
+                    const foundPaths = [];
+                    const visited = {};
+                    while (queue.length > 0) {
+                        const [current, path, lastLine, transfers] = queue.shift();
+                        if (current === end) {
+                            foundPaths.push({ steps: path, transfers });
+                            if (foundPaths.length >= 3) break;
+                            continue;
+                        }
+                        const neighbors = adjacency[current] || [];
+                        for (const neighbor of neighbors) {
+                            let newTransfers = transfers;
+                            if (lastLine && lastLine !== neighbor.line) newTransfers++;
+                            if (newTransfers > 3 || path.length > 35) continue;
+                            const stateKey = neighbor.to + neighbor.line;
+                            if (!visited[stateKey] || visited[stateKey] >= path.length) {
+                                visited[stateKey] = path.length;
+                                const newPath = [...path, { from: current, to: neighbor.to, line: neighbor.line, isTransfer: lastLine && lastLine !== neighbor.line }];
+                                queue.push([neighbor.to, newPath, neighbor.line, newTransfers]);
+                            }
+                        }
+                    }
+                    return foundPaths.sort((a,b) => a.steps.length - b.steps.length);
+                }
+
+                let currentPaths = [];
+
+                function selectPath(index, sName, eName) {
+                    document.querySelectorAll('.path-option').forEach(el => el.classList.remove('active'));
+                    const opt = document.getElementById(`path-opt-${index}`);
+                    if (opt) opt.classList.add('active');
+                    renderTimeline(sName, eName, currentPaths[index]);
+                }
+
+                function renderTimeline(startName, endName, result) {
+                    const timeline = document.getElementById('routeTimeline');
+                    timeline.innerHTML = '';
+                    let travelTime = result.steps.length * 2.5 + result.transfers * 6;
+                    
+                    document.getElementById('resTimeLabel').innerText = `約 ${Math.round(travelTime)} 分鐘`;
+                    document.getElementById('resFare').innerText = `$${calculateOfficialFare(result.steps, startName, endName)}`;
+                    document.getElementById('resStations').innerText = `${result.steps.length} 站`;
+                    document.getElementById('resTransfers').innerText = `${result.transfers} 次`;
+
+                    const nodes = [{ name: startName, line: result.steps[0].line, note: "起點上車" }];
+                    result.steps.forEach((step, idx) => {
+                        if (step.isTransfer) nodes.push({ name: step.from, line: result.steps[idx-1].line, note: `轉乘 ${LINE_NAMES[step.line]}` });
+                    });
+                    nodes.push({ name: endName, line: result.steps[result.steps.length - 1].line, note: "抵達" });
+
+                    nodes.forEach((node, idx) => {
+                        const item = document.createElement('div');
+                        item.className = 'relative pl-10 pb-6 last:pb-2 animate-fade-in';
+                        const colorClass = idx === 0 ? 'bg-blue-600' : (idx === nodes.length - 1 ? 'bg-red-500' : 'bg-purple-500');
+                        item.innerHTML = `
+                            <div class="absolute left-0 top-1.5 w-10 h-10 flex items-center justify-center z-10">
+                                <div class="w-3.5 h-3.5 rounded-full ${colorClass} ring-4 ring-white shadow-sm"></div>
+                            </div>
+                            <div>
+                                <div class="font-bold text-gray-800 text-sm">${node.name}</div>
+                                <div class="flex items-center mt-0.5">
+                                    <span class="line-badge" style="background:${LINE_COLORS[node.line]}">${node.line}</span>
+                                    <span class="text-[10px] text-gray-400 ml-2 font-medium">${node.note}</span>
+                                </div>
+                            </div>`;
+                        timeline.appendChild(item);
+                    });
+                }
+
+                // Event Listeners
+                document.getElementById('searchBtn').onclick = function() {
+                    let sName = document.getElementById('startInput').value.trim().replace('台北', '臺北');
+                    let eName = document.getElementById('endInput').value.trim().replace('台北', '臺北');
+                    if (!stationMap[sName] || !stationMap[eName]) return showToast("請選擇正確站名");
+
+                    document.getElementById('loading').classList.remove('hidden');
+                    document.getElementById('resultCard').classList.add('hidden');
+
+                    setTimeout(() => {
+                        currentPaths = findAllPaths(sName, eName);
+                        document.getElementById('loading').classList.add('hidden');
+                        document.getElementById('resultCard').classList.remove('hidden');
+
+                        if (currentPaths.length > 0) {
+                            document.getElementById('errorMsg').classList.add('hidden');
+                            document.getElementById('successContent').classList.remove('hidden');
+                            const list = document.getElementById('pathOptionsList');
+                            list.innerHTML = '';
+                            currentPaths.forEach((path, idx) => {
+                                const card = document.createElement('div');
+                                card.id = `path-opt-${idx}`;
+                                card.className = 'path-option min-w-[140px] bg-white p-3 rounded-xl shadow-sm cursor-pointer border-2 flex-shrink-0';
+                                card.onclick = () => selectPath(idx, sName, eName);
+                                card.innerHTML = `<div class="text-[10px] font-bold text-blue-500">選項 ${idx + 1}</div><div class="text-xs font-bold text-gray-800">${path.steps.length} 站 / ${path.transfers} 轉</div>`;
+                                list.appendChild(card);
+                            });
+                            selectPath(0, sName, eName);
+                        } else {
+                            document.getElementById('errorMsg').classList.remove('hidden');
+                            document.getElementById('successContent').classList.add('hidden');
+                        }
+                    }, 400);
+                };
+
+                document.getElementById('gpsBtn').onclick = function() {
+                    if (!navigator.geolocation) return showToast("不支援定位");
+                    const icon = document.getElementById('gpsIcon');
+                    icon.classList.add('spin-slow');
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        let min = Infinity, nearest = "臺北車站";
+                        for (const [name, coords] of Object.entries(STATION_COORDS)) {
+                            const d = Math.hypot(pos.coords.latitude - coords[0], pos.coords.longitude - coords[1]);
+                            if (d < min) { min = d; nearest = name; }
+                        }
+                        document.getElementById('startInput').value = nearest;
+                        showToast(`已定位：${nearest}`);
+                        icon.classList.remove('spin-slow');
+                        document.getElementById('clearStart').classList.remove('hidden');
+                    }, () => { showToast("定位失敗"); icon.classList.remove('spin-slow'); });
+                };
+
+                document.getElementById('swapBtn').onclick = function() {
+                    const s = document.getElementById('startInput'), e = document.getElementById('endInput');
+                    [s.value, e.value] = [e.value, s.value];
+                };
+
+                document.getElementById('clearStart').onclick = () => { document.getElementById('startInput').value = ''; document.getElementById('clearStart').classList.add('hidden'); };
+                document.getElementById('clearEnd').onclick = () => { document.getElementById('endInput').value = ''; document.getElementById('clearEnd').classList.add('hidden'); };
+
+                // Autocomplete setup
+                function setupAC(input, box, clearBtn) {
+                    input.oninput = (e) => {
+                        const val = e.target.value.trim().replace('台北', '臺北');
+                        clearBtn.classList.toggle('hidden', !val);
+                        box.innerHTML = '';
+                        if (!val) return box.classList.add('hidden');
+                        const matches = STATIONS_LIST.filter(s => s.name.includes(val)).slice(0, 8);
+                        matches.forEach(s => {
+                            const div = document.createElement('div');
+                            div.className = 'px-4 py-3 hover:bg-gray-50 cursor-pointer text-sm border-b';
+                            div.innerText = s.name;
+                            div.onclick = () => { input.value = s.name; box.classList.add('hidden'); };
+                            box.appendChild(div);
+                        });
+                        box.classList.remove('hidden');
+                    };
+                }
+                setupAC(document.getElementById('startInput'), document.getElementById('startSuggestions'), document.getElementById('clearStart'));
+                setupAC(document.getElementById('endInput'), document.getElementById('endSuggestions'), document.getElementById('clearEnd'));
+
+                setInterval(() => {
+                    document.getElementById('currentTimeDisplay').innerText = new Date().toLocaleString('zh-TW', { hour12: false });
+                }, 1000);
             });
-            document.addEventListener('click', e => { if(!input.contains(e.target)) box.classList.add('hidden'); });
-        }
-
-        setupAutocomplete(document.getElementById('startInput'), document.getElementById('startSuggestions'));
-        setupAutocomplete(document.getElementById('endInput'), document.getElementById('endSuggestions'));
-
-        function swapStations() {
-            const s = document.getElementById('startInput'), e = document.getElementById('endInput');
-            [s.value, e.value] = [e.value, s.value];
-            toggleClearBtn('startInput'); toggleClearBtn('endInput');
-        }
-
-        setInterval(() => {
-            document.getElementById('currentTimeDisplay').innerText = new Date().toLocaleString('zh-TW', { hour12: false });
-        }, 1000);
+        })();
     </script>
-</body>
-</html>
+</div>
